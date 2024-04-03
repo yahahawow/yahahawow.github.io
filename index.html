@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片展示页面</title>
+    <script src="vue.js"></script>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* 固定内容，防止滚动 */
+        }
+        #app {
+            width: 1024px; /* 设置页面宽度 */
+            height: 1024px; /* 设置页面高度 */
+            margin: 0 auto; /* 水平居中 */
+            display: flex;
+            flex-direction: row; /* 水平排列子元素 */
+        }
+        .image-display {
+            flex: 1; /* 图片展示区域占据剩余空间 */
+            position: relative;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .comments-display {
+            width: 20%; /* 评论展示区宽度 */
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        img {
+            max-width: 100%; /* 图片最大宽度为容器宽度 */
+            max-height: 100%; /* 图片最大高度为容器高度 */
+            position: absolute; /* 绝对定位 */
+            top: 50%; /* 位于容器垂直中心 */
+            left: 50%; /* 位于容器水平中心 */
+            transform: translate(-50%, -50%); /* 使图片居中 */
+        }
+        .next-button {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            color: #333;
+            transition: background-color 0.3s; /* 添加过渡效果 */
+        }
+        .next-button:hover {
+            color: #fff; /* 鼠标悬浮时改变文字颜色 */
+            background-color: #007bff; /* 鼠标悬浮时改变背景颜色 */
+        }
+        .next-button.disabled {
+            color: #ccc; /* 按钮被冻结时文字颜色变为灰色 */
+            cursor: not-allowed; /* 改变鼠标指针样式，表示不可用 */
+            background-color: transparent; /* 移除背景色 */
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="image-display">
+            <img :src="imageUrl" alt="展示图片">
+            <button class="next-button" :class="{disabled: !canClickNext}" @click="loadNextImage">&gt;</button>
+        </div>
+        <div class="comments-display">
+            <div v-for="comment in comments" :key="comment.id">
+                {{ comment.text }}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                imageUrl: '', // 图片URL
+                comments: [], // 评论数据
+                currentIndex: 0, // 当前图片索引
+                apiUrl: 'http://116.196.72.245:8080/meme/memeImg/rougeLikeMeme', // API端点URL
+                isLoading: false, // 是否正在加载数据
+                resp:[],
+                                canClickNext: true, // 控制按钮是否可点击
+                nextButtonClickTimer: null, // 按钮点击计时器
+            },
+            methods: {
+              fetchData() {
+                    this.isLoading = true;
+                    fetch(this.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            // 构造POST请求的数据体
+                            // 例如: { "userId": 12345, "otherData": "value" }
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data && data.data && data.data.length > 0) {
+                            this.resp=data.data;
+                            this.imageUrl = this.resp[this.currentIndex].url;
+                            this.comments = data.data;
+                        }
+                        this.isLoading = false;
+                    })
+                    .catch(error => {
+                        console.error('There was a problem with the fetch operation:', error);
+                        this.isLoading = false;
+                    });
+                },
+                loadNextImage: function() {
+                  if(this.canClickNext){
+                    if (this.currentIndex < this.comments.length - 1) {
+                        this.canClickNext = false;
+                        this.currentIndex++;
+                    } else {
+                        this.currentIndex = 0;
+                        this.fetchData();
+                    }
+                    this.updateImageAndComments();
+                                            // 设置计时器，5秒后启用按钮
+                    this.nextButtonClickTimer = setTimeout(() => {
+                        this.canClickNext = true;
+                      }, 3000);
+                  }
+                },
+                updateImageAndComments: function() {
+                    if (this.comments.length > 0) {
+                        this.imageUrl = this.resp[this.currentIndex].url;
+                        // 这里可以根据实际情况更新评论显示，如果需要的话
+                    }
+                }
+            },
+            created: function() {
+                this.fetchData();
+            }
+        });
+    </script>
+</body>
+</html>
